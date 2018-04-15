@@ -1,0 +1,177 @@
+---
+title: "Reproducible_reseach_week_2 hmwk"
+author: "Jeremy Jochim"
+date: "April 14, 2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(knitr)
+
+```
+
+# Reproducible Research Week 2 Homework
+
+The following analysis will look at a data set that contains data collected
+from a personal activity monitoring device. The data is collected into 5 minute
+intervals. The data was collected over a 2 month time period starting in October
+of 2012 and ending the following November. The data is the number of steps taken
+in each five minute interval.
+
+The data can be located at the following link: [Activity Monitory Data](https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2Factivity.zip)
+
+#Loading the data
+The data has 3 rows:  
+
+* STEPS: Number of steps taken  
+* DATE: Date the observation was taken  
+* INTERVAL: Which five minute period of a day the observation was collected  
+
+
+```{r}
+data <- read.csv("activity.csv",colClasses = c(NA,"Date",NA))
+kable(head(data),align = 'c')
+```
+
+#Exploring Steps taken by day
+
+Next I want to know the total number of steps take each day. This is done below.
+
+
+```{r message = FALSE, warning = FALSE}
+
+library(dplyr)
+
+totalSteps <- data %>% group_by(date) %>% summarise(totalSteps = sum(steps))
+
+kable(head(totalSteps),align = 'c')
+
+```
+
+Next I will make a histogram of the total number of steps taken each day.
+
+```{r}
+hist(totalSteps$totalSteps,xlab = "Total Daily Steps",ylab = "Frequency", main = "Histogram of Total Daily Steps")
+```
+
+Now I want to know the mean and median of the total number of daily steps.
+I used the following code to determine both values.
+
+```{r}
+meanDailySteps <- mean(totalSteps$totalSteps,na.rm=TRUE)
+medianDailySteps <- median(totalSteps$totalSteps,na.rm=TRUE)
+
+```
+
+The Mean number of steps per day is `r format(meanDailySteps,scientific = FALSE)`  
+The Median number of steps per day is `r format(medianDailySteps, Scientific = FALSE)`  
+  
+# Explore Average Steps taken per interval
+
+Next I want to know the average steps that are taken per interval.
+
+```{r}
+AvgStepsInterval <- data %>% group_by(interval) %>% summarise(avgSteps = mean(steps,na.rm=TRUE))
+
+kable(head(AvgStepsInterval),align = 'c', padding = 0)
+```
+  
+Below is a chart showing the daily step count profile for the study subject
+
+```{r}
+plot.ts(AvgStepsInterval$avgSteps, xlab = "5 Minute Interval", ylab = "Average Step Count")
+
+```
+
+I want to know which 5 minute interval is has the highest number of steps taken on average.
+
+```{r}
+maxInterval <- which.max(AvgStepsInterval$avgSteps)
+
+```
+
+The internal with the highest average steps was interval number `r maxInterval`.
+
+# Dealing with unusable data
+
+Now i want to deal with the missing data in the data set. Since I have already calculated the  
+average number of steps per interval, I want to use that data to replace any null values that  
+exist in the original data set.  So for every NA in the data set I am going to replace it with  
+the cooresponding Average Step count for that specific interval.  I do that with the code below.
+I should have a new data set stored in dataNoNA that no longer has NA values.
+
+```{r}
+dataNoNA <- data
+dataNoNA$steps <- ifelse(is.na(dataNoNA$steps) == TRUE
+                     ,AvgStepsInterval$avgSteps[AvgStepsInterval$interval %in% dataNoNA$interval]
+                     , dataNoNA$steps
+                     ) 
+```
+
+Now like with the original data set. I want to see a histogram and the mean and median of the  
+new data set looking at total daily steps.
+
+```{r}
+
+totalStepsNoNA <- dataNoNA %>% group_by(date) %>% summarise(totalSteps = sum(steps))
+
+hist(totalStepsNoNA$totalSteps,xlab = "Total Daily Steps",ylab = "Frequency", main = "Histogram of Total Daily Steps")
+meanDailyStepsNoNA <- mean(totalStepsNoNA$totalSteps,na.rm=TRUE)
+medianDailyStepsNoNA <- median(totalStepsNoNA$totalSteps,na.rm=TRUE)
+
+```
+
+After the adjustment to the data the new average daily step count is `r format(meanDailyStepsNoNA, scientific = FALSE) ` versus `r format(meanDailySteps, scientific = FALSE)`  
+And the median for the adjust data set is `r format(medianDailyStepsNoNA,scientific = FALSE)` versus `r format(medianDailySteps,scientific = FALSE) `.
+
+The extra effort that was taken to replace the unusable data from the original data set with usable data did not have an appreciable impact on the mean or median values for the data set.
+
+# Explore Difference between Weekdays vs. Weekends
+
+Now i want to see if there is a diffence between weekdays and weekends. But first I have to apply a weekend and weekday
+label to the dataset. I will be using the adjusted dataset for this example  
+The following code will add a new column to the data. One that contain the day type
+
+
+```{r}
+dataNoNA$dayType <- ifelse(weekdays(dataNoNA$date) %in% c("Saturday","Sunday"),"Weekend","Weekday")
+kable(head(dataNoNA),align = 'c')
+```
+
+Now I will make two new datasets. One containing weekend observations and one containing weekday Observations
+
+```{r}
+
+dataNoNAWeekday <- subset(dataNoNA, dayType=="Weekday")
+dataNoNAWeekend <- subset(dataNoNA, dayType=="Weekend")
+
+```
+
+These two new data sets will need to be summarized to produce their mean number of steps per interval.  
+I used the following code to accomplish this step.
+```{r}
+
+AvgStepsIntervalWeekday <- 
+  dataNoNAWeekday %>% group_by(interval) %>% summarise(avgSteps = mean(steps,na.rm=TRUE))
+
+AvgStepsIntervalWeekend <- 
+  dataNoNAWeekend %>% group_by(interval) %>% summarise(avgSteps = mean(steps,na.rm=TRUE))
+```
+
+I want to compare the average weekly steps per interval profile for the weekend and weekday data sets side by side  
+The following code creates the two plots.
+
+I have no idea how to generate the example plot.  This is as good as is can get it, as this is a course in documentation and not in plotting.
+
+```{r}
+par(mfrow = c(1,2))
+plot.ts(AvgStepsIntervalWeekday$avgSteps, main = "Weekdays"
+                                        , xlab = "5 Minute Interval"
+                                        , ylab = "Average Step Count")
+plot.ts(AvgStepsIntervalWeekend$avgSteps, main = "Weekends"
+                                        , xlab = "5 Minute Interval"
+                                        , ylab = "Average Step Count")
+
+```
+
